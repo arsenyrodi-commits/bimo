@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>БИМО</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#111;display:flex;justify-content:center;padding:20px;font-family:system-ui,-apple-system,sans-serif}
+.phone{width:400px;background:#000;border-radius:40px;overflow:hidden;position:relative;box-shadow:0 0 80px rgba(0,229,255,.08),0 40px 100px rgba(0,0,0,.8);min-height:860px}
+.page{display:none;flex-direction:column;min-height:860px}
+.page.active{display:flex}
+.scroll{flex:1;overflow-y:auto;padding:30px 22px 110px;display:flex;flex-direction:column;gap:20px}
+.scroll::-webkit-scrollbar{display:none}
+
+/* NAV */
+.nav{position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.97);border-top:.5px solid rgba(255,255,255,.1);display:flex;justify-content:space-around;padding:14px 0 22px;z-index:99}
+.nb{display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;padding:8px 16px;border-radius:14px;border:none;background:none;transition:background .2s}
+.nb:hover{background:rgba(255,255,255,.05)}
+.nb svg{color:rgba(255,255,255,.28);transition:color .2s}
+.nb span{font-size:.75rem;color:rgba(255,255,255,.28);letter-spacing:.04em;transition:color .2s}
+.nb.active svg,.nb.active span{color:#00E5FF}
+
+/* TYPE — крупнее для проектора */
+.ttl{font-size:1.6rem;font-weight:600;color:#fff;letter-spacing:-.02em;line-height:1.2}
+.sub{font-size:1rem;color:rgba(255,255,255,.42);margin-top:3px}
+.lbl{font-size:.78rem;color:rgba(255,255,255,.32);letter-spacing:.1em;text-transform:uppercase}
+.muted{color:rgba(255,255,255,.4);font-size:.95rem}
+
+/* CARDS */
+.card{background:rgba(255,255,255,.06);border:.5px solid rgba(255,255,255,.1);border-radius:20px;padding:20px}
+.card-sm{background:rgba(255,255,255,.06);border:.5px solid rgba(255,255,255,.1);border-radius:16px;padding:16px}
+
+/* HOLOGRAM */
+.holo-wrap{display:flex;flex-direction:column;align-items:center;gap:12px;padding:10px 0}
+.holo-outer{position:relative;width:130px;height:130px;display:flex;align-items:center;justify-content:center}
+.hring{position:absolute;border-radius:50%;border:.5px solid rgba(0,229,255,.22);animation:pr 3s ease-in-out infinite}
+.hsphere{width:90px;height:90px;border-radius:50%;background:radial-gradient(circle at 38% 36%,rgba(0,229,255,.55) 0%,rgba(0,80,120,.7) 55%,rgba(0,0,0,.85) 100%);display:flex;align-items:center;justify-content:center;animation:br 4s ease-in-out infinite;transition:background .5s}
+.hsphere.alert{background:radial-gradient(circle at 38% 36%,rgba(255,0,127,.55) 0%,rgba(120,0,60,.7) 55%,rgba(0,0,0,.85) 100%);animation:br 1.6s ease-in-out infinite}
+.hsphere.listen{background:radial-gradient(circle at 38% 36%,rgba(120,80,255,.55) 0%,rgba(40,0,100,.7) 55%,rgba(0,0,0,.85) 100%);animation:br .8s ease-in-out infinite}
+.hlabel{font-size:1.05rem;font-weight:500;letter-spacing:.1em;color:#00E5FF;transition:color .3s}
+.hmood{font-size:.95rem;color:rgba(255,255,255,.45);text-align:center;min-height:1.3em;transition:all .3s}
+
+@keyframes br{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+@keyframes pr{0%,100%{transform:scale(1);opacity:.55}50%{transform:scale(1.18);opacity:.18}}
+@keyframes fi{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes sb{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes ripple{0%{transform:scale(1);opacity:.7}100%{transform:scale(2.5);opacity:0}}
+@keyframes countdn{from{stroke-dashoffset:0}to{stroke-dashoffset:283}}
+@keyframes pulse-voice{0%,100%{transform:scaleY(1)}50%{transform:scaleY(2)}}
+
+/* SOS CHAIN */
+.sos-main{width:100%;padding:18px;border-radius:18px;border:2px solid rgba(255,0,127,.5);background:rgba(255,0,127,.09);color:#FF007F;font-size:1.15rem;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;letter-spacing:.06em;transition:all .2s;position:relative;overflow:hidden}
+.sos-main:hover{background:rgba(255,0,127,.18);border-color:#FF007F}
+.sos-main:active{transform:scale(.97)}
+.sos-chain{display:none;flex-direction:column;gap:0;border-radius:20px;overflow:hidden;border:.5px solid rgba(255,0,127,.3)}
+.sos-chain.show{display:flex}
+.chain-step{padding:16px 18px;display:flex;align-items:center;gap:12px;border-bottom:.5px solid rgba(255,0,127,.15);background:rgba(255,0,127,.05);transition:background .3s}
+.chain-step:last-child{border-bottom:none}
+.chain-step.done{background:rgba(0,229,255,.06);border-color:rgba(0,229,255,.1)}
+.chain-step.done .step-icon{color:#00E5FF}
+.chain-step.done .step-title{color:#00E5FF}
+.chain-step.active-step{background:rgba(255,0,127,.12)}
+.step-num{width:28px;height:28px;border-radius:50%;border:1.5px solid rgba(255,0,127,.4);display:flex;align-items:center;justify-content:center;font-size:.8rem;color:rgba(255,0,127,.7);flex-shrink:0;transition:all .3s}
+.chain-step.done .step-num{border-color:#00E5FF;color:#00E5FF;background:rgba(0,229,255,.1)}
+.step-icon{color:#FF007F;flex-shrink:0;transition:color .3s}
+.step-title{font-size:.98rem;font-weight:500;color:#fff;transition:color .3s}
+.step-sub{font-size:.82rem;color:rgba(255,255,255,.4);margin-top:2px}
+.countdown-wrap{display:flex;justify-content:center;align-items:center;padding:10px 0 4px;position:relative}
+.cd-svg{transform:rotate(-90deg)}
+.cd-text{position:absolute;font-size:1.6rem;font-weight:500;color:#FF007F}
+.cd-cancel{width:100%;padding:13px;border-radius:14px;border:.5px solid rgba(255,255,255,.15);background:transparent;color:rgba(255,255,255,.5);font-size:.95rem;cursor:pointer;transition:all .2s}
+.cd-cancel:hover{background:rgba(255,255,255,.06);color:#fff}
+
+/* ONBOARDING */
+.ob-wrap{display:flex;flex-direction:column;min-height:860px;background:#000;position:relative}
+.ob-step{display:none;flex-direction:column;flex:1;padding:40px 24px 50px;justify-content:space-between;animation:fi .4s ease both}
+.ob-step.active{display:flex}
+.ob-progress{display:flex;gap:6px;margin-bottom:32px}
+.ob-dot{height:3px;border-radius:2px;flex:1;background:rgba(255,255,255,.12);transition:background .3s}
+.ob-dot.done{background:#00E5FF}
+.ob-big{font-size:2rem;font-weight:600;color:#fff;line-height:1.25;margin-bottom:12px}
+.ob-desc{font-size:1.1rem;color:rgba(255,255,255,.5);line-height:1.65}
+.ob-btn{width:100%;padding:18px;border-radius:18px;background:#00E5FF;border:none;color:#000;font-size:1.1rem;font-weight:600;cursor:pointer;transition:opacity .2s;letter-spacing:.02em}
+.ob-btn:hover{opacity:.88}
+.ob-btn.pink{background:#FF007F;color:#fff}
+.ob-skip{text-align:center;margin-top:14px;font-size:.88rem;color:rgba(255,255,255,.28);cursor:pointer}
+.ob-skip:hover{color:rgba(255,255,255,.5)}
+.ob-emoji{font-size:3.5rem;margin-bottom:20px}
+.ob-input{width:100%;padding:16px 18px;border-radius:14px;border:.5px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:#fff;font-size:1.2rem;outline:none;margin-top:16px}
+.ob-input:focus{border-color:#00E5FF}
+.ob-contacts{display:flex;flex-direction:column;gap:10px;margin-top:16px}
+.ob-contact{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:14px;border:.5px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);cursor:pointer;transition:all .2s}
+.ob-contact:hover,.ob-contact.sel{border-color:rgba(0,229,255,.4);background:rgba(0,229,255,.07)}
+.ob-contact-name{font-size:1rem;color:#fff;font-weight:500}
+.ob-contact-phone{font-size:.85rem;color:rgba(255,255,255,.4)}
+.ob-avatar{width:40px;height:40px;border-radius:50%;background:rgba(0,229,255,.15);display:flex;align-items:center;justify-content:center;font-size:1.1rem;font-weight:500;color:#00E5FF;flex-shrink:0}
+.med-check{display:flex;flex-direction:column;gap:10px;margin-top:16px}
+.med-chk{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:14px;border:.5px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);cursor:pointer;transition:all .2s}
+.med-chk.sel{border-color:rgba(0,229,255,.4);background:rgba(0,229,255,.07)}
+.chk-box{width:22px;height:22px;border-radius:6px;border:1.5px solid rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0}
+.med-chk.sel .chk-box{background:#00E5FF;border-color:#00E5FF}
+
+/* VOICE DEMO */
+.voice-bar-wrap{display:flex;align-items:flex-end;justify-content:center;gap:4px;height:50px;margin:10px 0}
+.vbar{width:6px;border-radius:3px;background:#00E5FF;min-height:6px;animation:pulse-voice 0s ease-in-out infinite;opacity:.7}
+.voice-bubble{background:rgba(0,229,255,.08);border:.5px solid rgba(0,229,255,.2);border-radius:16px 16px 16px 4px;padding:14px 16px;font-size:1rem;color:rgba(255,255,255,.75);line-height:1.55;margin-top:6px;animation:fi .4s ease both}
+.voice-bubble.user{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.1);border-radius:16px 16px 4px 16px;text-align:right}
+.voice-btn{width:64px;height:64px;border-radius:50%;background:rgba(0,229,255,.15);border:2px solid rgba(0,229,255,.4);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;position:relative}
+.voice-btn:hover{background:rgba(0,229,255,.25)}
+.voice-btn.recording{background:rgba(255,0,127,.2);border-color:#FF007F;animation:sb .8s ease-in-out infinite}
+.ripple-ring{position:absolute;width:100%;height:100%;border-radius:50%;border:2px solid rgba(0,229,255,.4);animation:ripple 1.5s ease-out infinite;display:none}
+.voice-btn.recording .ripple-ring{display:block}
+
+/* HEALTH CHART */
+.chart-row{display:flex;align-items:flex-end;gap:4px;height:64px}
+.cbar{flex:1;border-radius:4px 4px 0 0;min-height:8px;background:rgba(0,229,255,.22);transition:background .3s}
+.cbar.hi{background:rgba(255,0,127,.45)}
+.cbar.sel{background:#00E5FF}
+.cog-row{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.cog-bg{flex:1;height:5px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden}
+.cog-fill{height:100%;border-radius:3px;background:#00E5FF}
+.cog-lbl{font-size:.85rem;color:rgba(255,255,255,.42);width:100px;flex-shrink:0}
+.cog-v{font-size:.85rem;color:#00E5FF;width:34px;text-align:right;flex-shrink:0}
+.week-grid{display:flex;gap:8px}
+.day-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px}
+.day-dot{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:500}
+.day-lbl{font-size:.7rem;color:rgba(255,255,255,.32)}
+
+/* MEDS */
+.med-item{display:flex;align-items:center;gap:14px;padding:15px 0;border-bottom:.5px solid rgba(255,255,255,.07)}
+.med-item:last-child{border-bottom:none;padding-bottom:0}
+.med-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+.med-text{flex:1}
+.med-name{font-size:1.05rem;color:#fff;font-weight:500}
+.med-time{font-size:.88rem;color:rgba(255,255,255,.38);margin-top:3px}
+.badge{font-size:.78rem;padding:5px 12px;border-radius:20px;font-weight:500;white-space:nowrap}
+.bc{background:rgba(0,229,255,.14);color:#00E5FF}
+.ba{background:rgba(255,187,51,.14);color:#FFBB33}
+.bd{background:rgba(255,255,255,.07);color:rgba(255,255,255,.38)}
+
+/* SMART HOME */
+.ctrl-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:.5px solid rgba(255,255,255,.07)}
+.ctrl-row:last-child{border-bottom:none}
+.ctrl-l{display:flex;align-items:center;gap:12px}
+.ctrl-title{font-size:1rem;color:#fff}
+.ctrl-sub{font-size:.85rem;color:rgba(255,255,255,.35);margin-top:3px}
+.pill{width:50px;height:28px;border-radius:14px;padding:3px;cursor:pointer;transition:background .25s;display:flex;align-items:center}
+.pill.on{background:rgba(0,229,255,.3)}
+.pill.off{background:rgba(255,255,255,.1)}
+.pill-t{width:22px;height:22px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 4px rgba(0,0,0,.4)}
+.pill.on .pill-t{transform:translateX(22px)}
+.temp-ctrl{display:flex;align-items:center;gap:8px}
+.tbtn{width:34px;height:34px;border-radius:50%;border:.5px solid rgba(255,255,255,.18);background:rgba(255,255,255,.07);color:#fff;font-size:1.2rem;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.tbtn:hover{background:rgba(255,255,255,.14)}
+.tv{font-size:1.05rem;color:#00E5FF;font-weight:500;min-width:38px;text-align:center}
+
+/* DEVICE */
+.device-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:.5px solid rgba(255,255,255,.07)}
+.device-row:last-child{border-bottom:none}
+.dicon{width:36px;height:36px;border-radius:10px;background:rgba(0,229,255,.1);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.dname{font-size:.95rem;color:#fff;flex:1}
+.dstatus{font-size:.78rem;color:#00E5FF}
+
+/* HOLO OPTS */
+.holo-opts{display:flex;gap:10px}
+.holo-opt{flex:1;padding:12px 8px;border-radius:14px;border:.5px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);display:flex;flex-direction:column;align-items:center;gap:7px;cursor:pointer;transition:all .2s}
+.holo-opt.sel{border-color:rgba(0,229,255,.5);background:rgba(0,229,255,.07)}
+.holo-opt span{font-size:.78rem;color:rgba(255,255,255,.4)}
+.holo-opt.sel span{color:#00E5FF}
+.hmini{width:32px;height:32px;border-radius:50%}
+.opt-row{display:flex;gap:8px}
+.opt-pill{flex:1;padding:11px 6px;border-radius:12px;border:.5px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:rgba(255,255,255,.45);font-size:.88rem;text-align:center;cursor:pointer;transition:all .2s}
+.opt-pill.sel{border-color:rgba(0,229,255,.5);background:rgba(0,229,255,.1);color:#00E5FF}
+.add-btn{width:100%;padding:15px;border-radius:16px;border:.5px solid rgba(0,229,255,.3);background:rgba(0,229,255,.06);color:#00E5FF;font-size:1rem;cursor:pointer;transition:background .2s}
+.add-btn:hover{background:rgba(0,229,255,.12)}
+.doc-btn{width:100%;padding:15px;border-radius:16px;border:.5px solid rgba(255,255,255,.12);background:transparent;color:rgba(255,255,255,.45);font-size:1rem;cursor:pointer;transition:all .2s}
+.doc-btn:hover{background:rgba(255,255,255,.05);color:#fff}
+.top-bar{display:flex;justify-content:space-between;align-items:flex-start}
+.dot-on{width:10px;height:10px;border-radius:50%;background:#00E5FF;box-shadow:0 0 8px rgba(0,229,255,.9);margin-top:5px}
+</style>
+</head>
+<body>
+<div class="phone">
+
+<!-- ═══ ONBOARDING ═══ -->
+<div class="ob-wrap active" id="ob-wrap">
+  <div style="padding:24px 22px 12px;display:flex;gap:6px" id="ob-prog">
+    <div class="ob-dot done" id="od0"></div>
+    <div class="ob-dot" id="od1"></div>
+    <div class="ob-dot" id="od2"></div>
+    <div class="ob-dot" id="od3"></div>
+    <div class="ob-dot" id="od4"></div>
+  </div>
+
+  <!-- Step 0: Приветствие -->
+  <div class="ob-step active" id="obs0">
+    <div>
+      <div style="display:flex;flex-direction:column;align-items:center;padding:20px 0 30px">
+        <div style="position:relative;width:110px;height:110px;display:flex;align-items:center;justify-content:center;margin-bottom:18px">
+          <div class="hring" style="width:110px;height:110px"></div>
+          <div class="hring" style="width:86px;height:86px;animation-delay:.5s"></div>
+          <div class="hsphere" style="width:76px;height:76px">
+            <svg width="28" height="28" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="12" stroke="rgba(0,229,255,.7)" stroke-width="1.2"/><circle cx="16" cy="13" r="4" stroke="rgba(0,229,255,.8)" stroke-width="1"/><path d="M9 26c0-4 3.1-7 7-7s7 3 7 7" stroke="rgba(0,229,255,.7)" stroke-width="1" stroke-linecap="round"/></svg>
+          </div>
+        </div>
+        <div style="font-size:1.1rem;letter-spacing:.1em;color:#00E5FF;font-weight:500;margin-bottom:6px">БИМО</div>
+        <div style="font-size:.88rem;color:rgba(255,255,255,.35)">Ваш ИИ-компаньон</div>
+      </div>
+      <div class="ob-big">Здравствуйте!<br>Я — БИМО</div>
+      <div class="ob-desc" style="margin-top:12px">Я помогу вам следить за здоровьем, напомню о лекарствах и всегда буду рядом, если понадоблюсь помощь.</div>
+    </div>
+    <div>
+      <button class="ob-btn" onclick="obNext()">Начать знакомство →</button>
+      <div class="ob-skip" onclick="skipOb()">Пропустить</div>
+    </div>
+  </div>
+
+  <!-- Step 1: Имя -->
+  <div class="ob-step" id="obs1">
+    <div>
+      <div class="ob-emoji">👋</div>
+      <div class="ob-big">Как вас зовут?</div>
+      <div class="ob-desc">Я буду обращаться к вам по имени — так уютнее.</div>
+      <input class="ob-input" id="ob-name" type="text" placeholder="Например: Галина" maxlength="20">
+    </div>
+    <div>
+      <button class="ob-btn" onclick="obNext()">Продолжить →</button>
+      <div class="ob-skip" onclick="obNext()">Пропустить</div>
+    </div>
+  </div>
+
+  <!-- Step 2: Контакт SOS -->
+  <div class="ob-step" id="obs2">
+    <div>
+      <div class="ob-emoji">🔴</div>
+      <div class="ob-big">Кто придёт на помощь?</div>
+      <div class="ob-desc">В экстренной ситуации БИМО сразу позвонит этому человеку.</div>
+      <div class="ob-contacts">
+        <div class="ob-contact sel" onclick="selContact(this)">
+          <div class="ob-avatar">АН</div>
+          <div><div class="ob-contact-name">Анна Николаевна</div><div class="ob-contact-phone">+7 916 234-56-78 · Дочь</div></div>
+        </div>
+        <div class="ob-contact" onclick="selContact(this)">
+          <div class="ob-avatar">МС</div>
+          <div><div class="ob-contact-name">Михаил Сергеевич</div><div class="ob-contact-phone">+7 903 111-22-33 · Сын</div></div>
+        </div>
+        <div class="ob-contact" onclick="selContact(this)" style="border-style:dashed;justify-content:center;gap:8px">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.3)" stroke-width="1.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          <span style="font-size:.95rem;color:rgba(255,255,255,.35)">Добавить другой контакт</span>
+        </div>
+      </div>
+    </div>
+    <div>
+      <button class="ob-btn" onclick="obNext()">Выбрано →</button>
+    </div>
+  </div>
+
+  <!-- Step 3: Лекарства -->
+  <div class="ob-step" id="obs3">
+    <div>
+      <div class="ob-emoji">💊</div>
+      <div class="ob-big">Ваши лекарства</div>
+      <div class="ob-desc">Отметьте, что принимаете — я напомню вовремя.</div>
+      <div class="med-check">
+        <div class="med-chk sel" onclick="togChk(this)">
+          <div class="chk-box"><svg width="12" height="12" viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3" stroke="#000" stroke-width="2" fill="none" stroke-linecap="round"/></svg></div>
+          <div><div style="font-size:1rem;color:#fff;font-weight:500">Арнотолол 25мг</div><div style="font-size:.85rem;color:rgba(255,255,255,.38)">08:00 · Утром</div></div>
+        </div>
+        <div class="med-chk sel" onclick="togChk(this)">
+          <div class="chk-box"><svg width="12" height="12" viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3" stroke="#000" stroke-width="2" fill="none" stroke-linecap="round"/></svg></div>
+          <div><div style="font-size:1rem;color:#fff;font-weight:500">Витамин D3 1000</div><div style="font-size:.85rem;color:rgba(255,255,255,.38)">14:00 · В обед</div></div>
+        </div>
+        <div class="med-chk" onclick="togChk(this)">
+          <div class="chk-box"></div>
+          <div><div style="font-size:1rem;color:#fff;font-weight:500">Магний B6</div><div style="font-size:.85rem;color:rgba(255,255,255,.38)">20:00 · Вечером</div></div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <button class="ob-btn" onclick="obNext()">Готово →</button>
+    </div>
+  </div>
+
+  <!-- Step 4: Готово -->
+  <div class="ob-step" id="obs4">
+    <div>
+      <div style="display:flex;flex-direction:column;align-items:center;padding:30px 0 24px">
+        <div style="width:80px;height:80px;border-radius:50%;background:rgba(0,229,255,.12);border:2px solid #00E5FF;display:flex;align-items:center;justify-content:center;margin-bottom:18px">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <div style="font-size:1.05rem;color:#00E5FF;letter-spacing:.08em">БИМО ГОТОВ</div>
+      </div>
+      <div class="ob-big" id="ob-ready-name">Галина, всё готово!</div>
+      <div class="ob-desc" style="margin-top:12px;line-height:1.7">
+        Ваш SOS-контакт: <span style="color:#fff">Анна Николаевна</span><br>
+        Лекарств настроено: <span style="color:#fff">2 напоминания</span><br>
+        Голосовое управление: <span style="color:#00E5FF">включено</span>
+      </div>
+    </div>
+    <div>
+      <button class="ob-btn" onclick="finishOb()">Открыть БИМО →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ГЛАВНАЯ ═══ -->
+<div class="page" id="page-home">
+<div class="scroll">
+
+  <div class="top-bar">
+    <div><div class="ttl" id="home-name">Добрый день, Галина</div><div class="sub" id="home-date"></div></div>
+    <div class="dot-on" id="home-dot"></div>
+  </div>
+
+  <!-- ГОЛОСОВОЕ ДЕМО -->
+  <div class="card">
+    <div class="lbl" style="margin-bottom:14px">Голосовое управление</div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:10px">
+      <div class="voice-bar-wrap" id="vbars"></div>
+      <div id="voice-dialog" style="width:100%;display:flex;flex-direction:column;gap:8px;min-height:60px"></div>
+      <div style="display:flex;align-items:center;gap:16px;margin-top:6px">
+        <div style="font-size:.88rem;color:rgba(255,255,255,.35)" id="voice-hint">Нажмите и говорите</div>
+        <div class="voice-btn" id="vbtn" onclick="toggleVoice()">
+          <div class="ripple-ring"></div>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="1.5"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="holo-wrap">
+    <div class="holo-outer">
+      <div class="hring" style="width:130px;height:130px"></div>
+      <div class="hring" style="width:102px;height:102px;animation-delay:.5s"></div>
+      <div class="hsphere" id="home-sphere">
+        <svg width="34" height="34" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="12" stroke="rgba(0,229,255,.7)" stroke-width="1.2"/><circle cx="16" cy="13" r="4" stroke="rgba(0,229,255,.8)" stroke-width="1"/><path d="M9 26c0-4 3.1-7 7-7s7 3 7 7" stroke="rgba(0,229,255,.7)" stroke-width="1" stroke-linecap="round"/></svg>
+      </div>
+    </div>
+    <div class="hlabel" id="home-label">БИМО — Онлайн</div>
+    <div class="hmood" id="home-mood">Состояние спокойное ✦</div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:6px">
+    <div style="display:flex;justify-content:space-between">
+      <span class="muted" style="font-size:.9rem">Настроение</span>
+      <span style="font-size:.9rem;color:#00E5FF" id="home-mv">7 / 10</span>
+    </div>
+    <input type="range" min="1" max="10" value="7" id="home-slider" style="width:100%;accent-color:#00E5FF;height:6px">
+    <div style="display:flex;justify-content:space-between;margin-top:2px">
+      <span style="font-size:.75rem;color:rgba(255,255,255,.25)">Плохо</span>
+      <span style="font-size:.75rem;color:rgba(255,255,255,.25)">Отлично</span>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+    <div class="card-sm">
+      <div class="muted" style="font-size:.82rem;margin-bottom:8px">Пульс</div>
+      <div style="display:flex;align-items:flex-end;gap:2px;height:26px;margin-bottom:8px" id="hbars"></div>
+      <div style="display:flex;align-items:baseline;gap:5px">
+        <span style="font-size:1.8rem;font-weight:600;color:#00E5FF" id="home-bpm">78</span>
+        <span class="muted" style="font-size:.85rem">BPM</span>
+      </div>
+    </div>
+    <div class="card-sm">
+      <div class="muted" style="font-size:.82rem;margin-bottom:8px">Тревога</div>
+      <div style="font-size:1.4rem;font-weight:600;color:#fff;margin-bottom:5px" id="home-anxiety">Низкая</div>
+      <div class="muted" style="font-size:.8rem">Когнитивный анализ</div>
+    </div>
+  </div>
+
+  <div class="lbl">Лекарства сегодня</div>
+  <div class="card">
+    <div class="med-item">
+      <div class="med-dot" style="background:#00E5FF;box-shadow:0 0 6px rgba(0,229,255,.5)"></div>
+      <div class="med-text"><div class="med-name">Арнотолол 25мг</div><div class="med-time">08:00 · Утром</div></div>
+      <div class="badge bc">Принято</div>
+    </div>
+    <div class="med-item">
+      <div class="med-dot" style="background:#FFBB33;box-shadow:0 0 6px rgba(255,187,51,.4)"></div>
+      <div class="med-text"><div class="med-name">Витамин D3 1000</div><div class="med-time">14:00 · В обед · <span style="color:#FFBB33">через 1 ч 40 мин</span></div></div>
+      <div class="badge ba">Скоро</div>
+    </div>
+    <div class="med-item">
+      <div class="med-dot" style="background:rgba(255,255,255,.2)"></div>
+      <div class="med-text"><div class="med-name">Магний B6</div><div class="med-time">20:00 · Вечером</div></div>
+      <div class="badge bd">Запланировано</div>
+    </div>
+  </div>
+
+  <!-- SOS БЛОК -->
+  <div class="lbl">Экстренная помощь</div>
+  <div id="sos-idle">
+    <button class="sos-main" onclick="startSOS()">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FF007F" stroke-width="2"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      ЭКСТРЕННЫЙ ВЫЗОВ 112
+    </button>
+    <div class="muted" style="font-size:.8rem;text-align:center;margin-top:8px">Нажмите и удержите · Голос: «БИМО, помоги»</div>
+  </div>
+
+  <div id="sos-chain" class="sos-chain">
+    <div style="padding:16px 18px 12px;background:rgba(255,0,127,.07)">
+      <div style="font-size:.82rem;color:rgba(255,0,127,.7);letter-spacing:.08em;margin-bottom:8px">ВЫЗОВ АКТИВИРОВАН</div>
+      <div style="display:flex;justify-content:center;margin-bottom:10px">
+        <div class="countdown-wrap">
+          <svg class="cd-svg" width="90" height="90" viewBox="0 0 90 90">
+            <circle cx="45" cy="45" r="40" fill="none" stroke="rgba(255,0,127,.12)" stroke-width="5"/>
+            <circle id="cd-ring" cx="45" cy="45" r="40" fill="none" stroke="#FF007F" stroke-width="5" stroke-dasharray="251" stroke-dashoffset="0" stroke-linecap="round"/>
+          </svg>
+          <div class="cd-text" id="cd-num">30</div>
+        </div>
+      </div>
+      <div style="font-size:.88rem;color:rgba(255,255,255,.45);text-align:center">Автовызов через <span id="cd-label" style="color:#FF007F">30</span> секунд</div>
+    </div>
+    <div class="chain-step" id="cs0">
+      <div class="step-num">1</div>
+      <svg class="step-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.38 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.56a16 16 0 0 0 6.29 6.29l.87-.87a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+      <div><div class="step-title">Звонок 112</div><div class="step-sub">Служба экстренной помощи</div></div>
+    </div>
+    <div class="chain-step" id="cs1">
+      <div class="step-num">2</div>
+      <svg class="step-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      <div><div class="step-title">SMS Анне Николаевне</div><div class="step-sub">+7 916 234-56-78 · Дочь</div></div>
+    </div>
+    <div class="chain-step" id="cs2">
+      <div class="step-num">3</div>
+      <svg class="step-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/></svg>
+      <div><div class="step-title">Геолокация передана</div><div class="step-sub">Москва, ул. Садовая, 14</div></div>
+    </div>
+    <div style="padding:14px 18px">
+      <button class="cd-cancel" onclick="cancelSOS()">Отменить вызов</button>
+    </div>
+  </div>
+
+</div>
+
+<nav class="nav">
+  <button class="nb active" onclick="goTo('home')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Главная</span></button>
+  <button class="nb" onclick="goTo('health')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg><span>Здоровье</span></button>
+  <button class="nb" onclick="goTo('meds')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Лекарства</span></button>
+  <button class="nb" onclick="goTo('bimo')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path d="M6 20v-2a6 6 0 0 1 12 0v2"/></svg><span>БИМО</span></button>
+</nav>
+</div>
+
+<!-- ═══ ЗДОРОВЬЕ ═══ -->
+<div class="page" id="page-health">
+<div class="scroll">
+  <div class="top-bar"><div><div class="ttl">Здоровье</div><div class="sub">Мониторинг состояния</div></div><div class="dot-on"></div></div>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">
+      <div><div class="lbl" style="margin-bottom:5px">Пульс · 7 дней</div><div style="display:flex;align-items:baseline;gap:7px"><span style="font-size:2.2rem;font-weight:600;color:#00E5FF">78</span><span class="muted">BPM</span><span style="font-size:.8rem;color:#00E5FF;background:rgba(0,229,255,.1);padding:3px 10px;border-radius:12px">норма</span></div></div>
+      <div style="text-align:right"><div class="muted" style="font-size:.8rem">Среднее</div><div style="font-size:1.2rem;color:#fff;font-weight:500">76 BPM</div></div>
+    </div>
+    <div class="chart-row" id="bpm-chart"></div>
+    <div style="display:flex;justify-content:space-between;margin-top:7px">
+      <span class="muted" style="font-size:.74rem">Пн</span><span class="muted" style="font-size:.74rem">Вт</span><span class="muted" style="font-size:.74rem">Ср</span><span class="muted" style="font-size:.74rem">Чт</span><span class="muted" style="font-size:.74rem">Пт</span><span class="muted" style="font-size:.74rem">Сб</span><span style="font-size:.74rem;color:#00E5FF">Сег</span>
+    </div>
+  </div>
+  <div class="lbl">Когнитивный анализ</div>
+  <div class="card">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+      <div style="width:42px;height:42px;border-radius:50%;background:radial-gradient(circle at 38% 36%,rgba(0,229,255,.5) 0%,rgba(0,80,120,.65) 55%,rgba(0,0,0,.8) 100%);display:flex;align-items:center;justify-content:center;flex-shrink:0;animation:br 4s ease-in-out infinite"><svg width="18" height="18" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="12" stroke="rgba(0,229,255,.7)" stroke-width="1.2"/><circle cx="16" cy="13" r="4" stroke="rgba(0,229,255,.8)" stroke-width="1"/><path d="M9 26c0-4 3.1-7 7-7s7 3 7 7" stroke="rgba(0,229,255,.7)" stroke-width="1" stroke-linecap="round"/></svg></div>
+      <div><div style="font-size:1rem;color:#fff;font-weight:500">Отличные показатели</div><div class="muted" style="font-size:.85rem">БИМО анализирует каждый день</div></div>
+    </div>
+    <div class="cog-row"><span class="cog-lbl">Память</span><div class="cog-bg"><div class="cog-fill" style="width:82%"></div></div><span class="cog-v">82%</span></div>
+    <div class="cog-row"><span class="cog-lbl">Концентрация</span><div class="cog-bg"><div class="cog-fill" style="width:75%"></div></div><span class="cog-v">75%</span></div>
+    <div class="cog-row"><span class="cog-lbl">Речь</span><div class="cog-bg"><div class="cog-fill" style="width:90%"></div></div><span class="cog-v">90%</span></div>
+    <div class="cog-row" style="margin:0"><span class="cog-lbl">Реакция</span><div class="cog-bg"><div class="cog-fill" style="width:68%"></div></div><span class="cog-v">68%</span></div>
+  </div>
+  <div class="lbl">Настроение и тревога</div>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;margin-bottom:14px">
+      <div><div class="muted" style="font-size:.85rem;margin-bottom:4px">Уровень тревоги</div><div style="font-size:1.5rem;font-weight:600;color:#fff">Низкий</div></div>
+      <div style="text-align:right"><div class="muted" style="font-size:.85rem;margin-bottom:4px">Индекс стресса</div><div style="font-size:1.5rem;font-weight:600;color:#00E5FF">2.4</div></div>
+    </div>
+    <div style="background:rgba(0,229,255,.06);border:.5px solid rgba(0,229,255,.15);border-radius:12px;padding:14px;font-size:.95rem;color:rgba(255,255,255,.6);line-height:1.65">БИМО анализирует голос и движение. Признаков тревожности не обнаружено. Рекомендована прогулка в 16:00.</div>
+  </div>
+  <div class="lbl">Самочувствие · Неделя</div>
+  <div class="card">
+    <div class="week-grid">
+      <div class="day-col"><div class="day-dot" style="background:rgba(0,229,255,.15);color:#00E5FF">7</div><div class="day-lbl">Пн</div></div>
+      <div class="day-col"><div class="day-dot" style="background:rgba(0,229,255,.2);color:#00E5FF">8</div><div class="day-lbl">Вт</div></div>
+      <div class="day-col"><div class="day-dot" style="background:rgba(255,187,51,.15);color:#FFBB33">5</div><div class="day-lbl">Ср</div></div>
+      <div class="day-col"><div class="day-dot" style="background:rgba(0,229,255,.15);color:#00E5FF">7</div><div class="day-lbl">Чт</div></div>
+      <div class="day-col"><div class="day-dot" style="background:rgba(0,229,255,.25);color:#00E5FF">9</div><div class="day-lbl">Пт</div></div>
+      <div class="day-col"><div class="day-dot" style="background:rgba(0,229,255,.2);color:#00E5FF">8</div><div class="day-lbl">Сб</div></div>
+      <div class="day-col"><div class="day-dot" style="background:#00E5FF;color:#000">7</div><div class="day-lbl" style="color:#00E5FF">Сег</div></div>
+    </div>
+    <div style="margin-top:14px;display:flex;justify-content:space-between">
+      <span class="muted" style="font-size:.85rem">Средний балл: <span style="color:#00E5FF">7.3 / 10</span></span>
+      <span class="muted" style="font-size:.85rem">↑ 0.6 vs прошлой нед.</span>
+    </div>
+  </div>
+  <button class="sos-main" onclick="goTo('home');setTimeout(startSOS,300)">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FF007F" stroke-width="2"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    ЭКСТРЕННЫЙ ВЫЗОВ 112
+  </button>
+</div>
+<nav class="nav">
+  <button class="nb" onclick="goTo('home')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Главная</span></button>
+  <button class="nb active" onclick="goTo('health')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg><span>Здоровье</span></button>
+  <button class="nb" onclick="goTo('meds')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Лекарства</span></button>
+  <button class="nb" onclick="goTo('bimo')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path d="M6 20v-2a6 6 0 0 1 12 0v2"/></svg><span>БИМО</span></button>
+</nav>
+</div>
+
+<!-- ═══ ЛЕКАРСТВА ═══ -->
+<div class="page" id="page-meds">
+<div class="scroll">
+  <div class="top-bar"><div><div class="ttl">Лекарства</div><div class="sub">График приёма</div></div><div class="dot-on"></div></div>
+  <div style="background:rgba(0,229,255,.06);border:.5px solid rgba(0,229,255,.15);border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:11px">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    <span style="font-size:.95rem;color:rgba(255,255,255,.6)">БИМО напомнит о лекарствах заблаговременно</span>
+  </div>
+  <div class="lbl">Утро · 08:00</div>
+  <div class="card"><div class="med-item" style="border:none;padding-bottom:0"><div class="med-dot" style="background:#00E5FF;box-shadow:0 0 6px rgba(0,229,255,.5)"></div><div class="med-text"><div class="med-name">Арнотолол 25мг</div><div class="med-time">После завтрака · Снижение давления</div></div><div class="badge bc">Принято</div></div></div>
+  <div class="lbl">Обед · 14:00</div>
+  <div class="card">
+    <div class="med-item" style="border:none;padding-bottom:0">
+      <div class="med-dot" style="background:#FFBB33;box-shadow:0 0 6px rgba(255,187,51,.5)"></div>
+      <div class="med-text"><div class="med-name">Витамин D3 1000 МЕ</div><div class="med-time">Во время еды · <span style="color:#FFBB33">через 1 ч 40 мин</span></div></div>
+      <div class="badge ba">Скоро</div>
+    </div>
+  </div>
+  <div class="lbl">Вечер · 20:00</div>
+  <div class="card"><div class="med-item" style="border:none;padding-bottom:0"><div class="med-dot" style="background:rgba(255,255,255,.25)"></div><div class="med-text"><div class="med-name">Магний B6</div><div class="med-time">Перед сном · Расслабление мышц</div></div><div class="badge bd">Запланировано</div></div></div>
+  <div class="lbl">Статистика</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+    <div class="card-sm" style="text-align:center"><div class="muted" style="font-size:.82rem;margin-bottom:6px">Принято сегодня</div><div style="font-size:2rem;font-weight:600;color:#00E5FF">1 / 3</div></div>
+    <div class="card-sm" style="text-align:center"><div class="muted" style="font-size:.82rem;margin-bottom:6px">Точность · 30 дней</div><div style="font-size:2rem;font-weight:600;color:#00E5FF">94%</div></div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:10px">
+    <button class="add-btn">+ Добавить лекарство</button>
+    <button class="doc-btn">Связаться с врачом</button>
+  </div>
+  <button class="sos-main" onclick="goTo('home');setTimeout(startSOS,300)">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FF007F" stroke-width="2"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    ЭКСТРЕННЫЙ ВЫЗОВ 112
+  </button>
+</div>
+<nav class="nav">
+  <button class="nb" onclick="goTo('home')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Главная</span></button>
+  <button class="nb" onclick="goTo('health')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg><span>Здоровье</span></button>
+  <button class="nb active" onclick="goTo('meds')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Лекарства</span></button>
+  <button class="nb" onclick="goTo('bimo')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path d="M6 20v-2a6 6 0 0 1 12 0v2"/></svg><span>БИМО</span></button>
+</nav>
+</div>
+
+<!-- ═══ БИМО НАСТРОЙКИ ═══ -->
+<div class="page" id="page-bimo">
+<div class="scroll">
+  <div class="top-bar"><div><div class="ttl">БИМО</div><div class="sub">Персонализация и экосистема</div></div><div class="dot-on"></div></div>
+  <div class="holo-wrap">
+    <div class="holo-outer" style="width:100px;height:100px">
+      <div class="hring" style="width:100px;height:100px"></div>
+      <div class="hring" style="width:78px;height:78px;animation-delay:.5s"></div>
+      <div class="hsphere" style="width:66px;height:66px"><svg width="26" height="26" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="12" stroke="rgba(0,229,255,.7)" stroke-width="1.2"/><circle cx="16" cy="13" r="4" stroke="rgba(0,229,255,.8)" stroke-width="1"/><path d="M9 26c0-4 3.1-7 7-7s7 3 7 7" stroke="rgba(0,229,255,.7)" stroke-width="1" stroke-linecap="round"/></svg></div>
+    </div>
+    <div class="hlabel" style="font-size:.92rem">БИМО v2.1 · Онлайн</div>
+    <div class="hmood" style="font-size:.85rem">AI-компаньон · Обучение активно</div>
+  </div>
+  <div class="lbl">Персонализация · Голограмма</div>
+  <div class="card">
+    <div class="muted" style="font-size:.88rem;margin-bottom:12px">Внешний вид</div>
+    <div class="holo-opts">
+      <div class="holo-opt sel" onclick="selH(this)"><div class="hmini" style="background:radial-gradient(circle at 38% 36%,rgba(0,229,255,.6) 0%,rgba(0,80,120,.7) 60%,#000 100%)"></div><span>Классик</span></div>
+      <div class="holo-opt" onclick="selH(this)"><div class="hmini" style="background:radial-gradient(circle at 38% 36%,rgba(255,0,127,.5) 0%,rgba(80,0,50,.7) 60%,#000 100%)"></div><span>Нуар</span></div>
+      <div class="holo-opt" onclick="selH(this)"><div class="hmini" style="background:radial-gradient(circle at 38% 36%,rgba(130,80,255,.5) 0%,rgba(40,0,80,.7) 60%,#000 100%)"></div><span>Аврора</span></div>
+    </div>
+    <div class="muted" style="font-size:.88rem;margin:14px 0 10px">Голос</div>
+    <div class="opt-row">
+      <div class="opt-pill sel" onclick="selO(this)">Мягкий</div>
+      <div class="opt-pill" onclick="selO(this)">Нейтральный</div>
+      <div class="opt-pill" onclick="selO(this)">Чёткий</div>
+    </div>
+  </div>
+  <div class="lbl">Управление умным домом</div>
+  <div class="card">
+    <div class="ctrl-row"><div class="ctrl-l"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.38)" stroke-width="1.5"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg><div class="ctrl-info"><div class="ctrl-title">Освещение</div><div class="ctrl-sub">Гостиная · 70%</div></div></div><div class="pill on" onclick="this.classList.toggle('on');this.classList.toggle('off')"><div class="pill-t"></div></div></div>
+    <div class="ctrl-row"><div class="ctrl-l"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.38)" stroke-width="1.5"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/></svg><div class="ctrl-info"><div class="ctrl-title">Температура</div></div></div><div class="temp-ctrl"><button class="tbtn" onclick="chT(-1)">−</button><span class="tv" id="btemp">22°</span><button class="tbtn" onclick="chT(1)">+</button></div></div>
+    <div class="ctrl-row"><div class="ctrl-l"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.38)" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><div class="ctrl-info"><div class="ctrl-title">Безопасность</div><div class="ctrl-sub">Датчики активны</div></div></div><div class="pill on" onclick="this.classList.toggle('on');this.classList.toggle('off')"><div class="pill-t"></div></div></div>
+  </div>
+  <div class="lbl">Экосистема БИМО</div>
+  <div class="card">
+    <div class="device-row"><div class="dicon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="1.5"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18" stroke-width="2"/></svg></div><span class="dname">БИМО Браслет Pro</span><span class="dstatus">● Подключён</span></div>
+    <div class="device-row"><div class="dicon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="1.5"><path d="M9 9H4a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h5l3 3V6l-3 3z"/><path d="M17.657 6.343a8 8 0 0 1 0 11.314M20.485 3.515a12 12 0 0 1 0 16.97"/></svg></div><span class="dname">Умная колонка БИМО</span><span class="dstatus">● Подключён</span></div>
+    <div class="device-row"><div class="dicon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="1.5"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></div><span class="dname">Хаб умного дома</span><span class="dstatus">● Активен</span></div>
+    <div class="device-row"><div class="dicon" style="background:rgba(255,255,255,.05)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.25)" stroke-width="1.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div><span class="dname" style="color:rgba(255,255,255,.35)">Добавить устройство</span></div>
+  </div>
+  <div class="lbl">Обучение AI</div>
+  <div class="card">
+    <div class="ctrl-row"><div class="ctrl-info" style="flex:1;padding-right:12px"><div class="ctrl-title">Постоянное обучение</div><div class="ctrl-sub">Адаптация под пользователя</div></div><div class="pill on" onclick="this.classList.toggle('on');this.classList.toggle('off')"><div class="pill-t"></div></div></div>
+    <div class="ctrl-row"><div class="ctrl-info" style="flex:1;padding-right:12px"><div class="ctrl-title">Анализ голоса</div><div class="ctrl-sub">Детектирование тревоги</div></div><div class="pill on" onclick="this.classList.toggle('on');this.classList.toggle('off')"><div class="pill-t"></div></div></div>
+    <div class="ctrl-row"><div class="ctrl-info" style="flex:1;padding-right:12px"><div class="ctrl-title">Отчёт врачу</div><div class="ctrl-sub">Еженедельно</div></div><div class="pill off" onclick="this.classList.toggle('on');this.classList.toggle('off')"><div class="pill-t"></div></div></div>
+  </div>
+  <button class="sos-main" onclick="goTo('home');setTimeout(startSOS,300)">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FF007F" stroke-width="2"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    ЭКСТРЕННЫЙ ВЫЗОВ 112
+  </button>
+</div>
+<nav class="nav">
+  <button class="nb" onclick="goTo('home')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Главная</span></button>
+  <button class="nb" onclick="goTo('health')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg><span>Здоровье</span></button>
+  <button class="nb" onclick="goTo('meds')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Лекарства</span></button>
+  <button class="nb active" onclick="goTo('bimo')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path d="M6 20v-2a6 6 0 0 1 12 0v2"/></svg><span>БИМО</span></button>
+</nav>
+</div>
+
+</div>
+<script>
+var userName='Галина';
+
+/* ── ONBOARDING ── */
+var obStep=0,totalOb=5;
+function obNext(){
+  if(obStep===1){var n=document.getElementById('ob-name').value.trim();if(n)userName=n;}
+  obStep++;
+  document.querySelectorAll('.ob-step').forEach(function(s,i){s.classList.toggle('active',i===obStep);});
+  for(var i=0;i<totalOb;i++){var d=document.getElementById('od'+i);if(d)d.classList.toggle('done',i<=obStep);}
+  if(obStep===4){var el=document.getElementById('ob-ready-name');if(el)el.textContent=userName+', всё готово!';}
+}
+function skipOb(){finishOb();}
+function finishOb(){
+  document.getElementById('ob-wrap').style.display='none';
+  document.getElementById('page-home').classList.add('active');
+  var el=document.getElementById('home-name');
+  if(el){var h=new Date().getHours();var g=h<12?'Доброе утро':h<17?'Добрый день':'Добрый вечер';el.textContent=g+', '+userName;}
+}
+function selContact(el){el.closest('.ob-contacts').querySelectorAll('.ob-contact').forEach(function(c){c.classList.remove('sel')});el.classList.add('sel');}
+function togChk(el){el.classList.toggle('sel');}
+
+/* ── NAVIGATION ── */
+function goTo(id){
+  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active')});
+  document.getElementById('page-'+id).classList.add('active');
+  document.querySelectorAll('.nb').forEach(function(b,i){b.classList.remove('active');var m=['home','health','meds','bimo'];if(m[i]===id)b.classList.add('active');});
+}
+
+/* ── DATE ── */
+var d=new Date(),days=['Воскресенье','Понедельник','Вторник','Среда','Четверг','Пятница','Суббота'],months=['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
+var el=document.getElementById('home-date');if(el)el.textContent=days[d.getDay()]+', '+d.getDate()+' '+months[d.getMonth()];
+
+/* ── BPM BARS HOME ── */
+var hb=document.getElementById('hbars');
+if(hb){[5,12,7,18,9,15,6,11,20,8].forEach(function(h,i){var b=document.createElement('div');b.style.cssText='width:5px;height:'+h+'px;border-radius:2px 2px 0 0;background:rgba(0,229,255,.35);animation:pulse-voice '+(1.1+i*.07)+'s ease-in-out infinite;animation-delay:'+(i*.1)+'s';hb.appendChild(b);});}
+setInterval(function(){var e=document.getElementById('home-bpm');if(e)e.textContent=78+Math.round((Math.random()-.5)*8);},1800);
+
+/* ── HEALTH CHART ── */
+var bpmData=[65,72,80,75,68,85,78],maxB=Math.max.apply(null,bpmData);
+var ch=document.getElementById('bpm-chart');
+if(ch){bpmData.forEach(function(v,i){var b=document.createElement('div');b.className='cbar'+(v>78?' hi':'')+(i===6?' sel':'');b.style.height=Math.round(v/maxB*100)+'%';ch.appendChild(b);});}
+
+/* ── MOOD SLIDER ── */
+var sl=document.getElementById('home-slider');
+if(sl){sl.addEventListener('input',function(){
+  var v=parseInt(this.value);
+  document.getElementById('home-mv').textContent=v+' / 10';
+  var sphere=document.getElementById('home-sphere'),label=document.getElementById('home-label'),mood=document.getElementById('home-mood'),dot=document.getElementById('home-dot'),ax=document.getElementById('home-anxiety');
+  if(v<4){
+    if(sphere){sphere.style.background='radial-gradient(circle at 38% 36%,rgba(255,0,127,.55) 0%,rgba(120,0,60,.7) 55%,rgba(0,0,0,.85) 100%)';}
+    if(label){label.textContent='БИМО — Тревога';label.style.color='#FF007F';}
+    if(mood)mood.textContent='Обнаружен стресс — поговорим?';
+    if(dot){dot.style.background='#FF007F';dot.style.boxShadow='0 0 8px rgba(255,0,127,.9)';}
+    if(ax){ax.textContent='Высокая';ax.style.color='#FF007F';}
+  } else {
+    if(sphere){sphere.style.background='radial-gradient(circle at 38% 36%,rgba(0,229,255,.55) 0%,rgba(0,80,120,.7) 55%,rgba(0,0,0,.85) 100%)';}
+    if(label){label.textContent='БИМО — Онлайн';label.style.color='#00E5FF';}
+    if(mood)mood.textContent=v>=7?'Состояние спокойное ✦':'Всё под контролем';
+    if(dot){dot.style.background='#00E5FF';dot.style.boxShadow='0 0 8px rgba(0,229,255,.9)';}
+    if(ax){ax.textContent=v>=7?'Низкая':'Умеренная';ax.style.color=v>=7?'#fff':'#FFBB33';}
+  }
+});}
+
+/* ── SOS CHAIN ── */
+var sosTimer=null,sosInterval=null,sosCD=30;
+function startSOS(){
+  document.getElementById('sos-idle').style.display='none';
+  document.getElementById('sos-chain').classList.add('show');
+  sosCD=30;updateCD();
+  sosInterval=setInterval(function(){
+    sosCD--;updateCD();
+    if(sosCD<=20)activateStep(0);
+    if(sosCD<=12)activateStep(1);
+    if(sosCD<=5)activateStep(2);
+    if(sosCD<=0){clearInterval(sosInterval);document.getElementById('cd-label').textContent='Вызов активирован';}
+  },1000);
+}
+function updateCD(){
+  var n=document.getElementById('cd-num'),l=document.getElementById('cd-label'),r=document.getElementById('cd-ring');
+  if(n)n.textContent=Math.max(0,sosCD);
+  if(l)l.textContent=Math.max(0,sosCD)+' секунд';
+  if(r){var pct=sosCD/30;r.style.strokeDashoffset=Math.round(251*(1-pct));}
+}
+function activateStep(i){
+  var s=document.getElementById('cs'+i);
+  if(s&&!s.classList.contains('done')){s.classList.add('active-step');setTimeout(function(){s.classList.remove('active-step');s.classList.add('done');},800);}
+}
+function cancelSOS(){
+  clearInterval(sosInterval);
+  document.getElementById('sos-chain').classList.remove('show');
+  document.getElementById('sos-idle').style.display='block';
+  ['cs0','cs1','cs2'].forEach(function(id){var s=document.getElementById(id);if(s){s.classList.remove('done','active-step');}});
+}
+
+/* ── VOICE DEMO ── */
+var vbarsEl=document.getElementById('vbars'),vRecording=false,vTimer=null;
+var vScripts=[
+  {user:'БИМО, как я себя чувствую?',bimo:'Галина, сегодня ваш пульс 78 BPM — в норме. Настроение вы оценили на 7. Всё хорошо!'},
+  {user:'Напомни про таблетки в 14:00.',bimo:'Хорошо, Галина. Напомню о Витамине D3 в 14:00. Не забудьте принять во время еды.'},
+  {user:'БИМО, включи свет в гостиной.',bimo:'Включаю свет в гостиной. Яркость 70%. Если хотите — могу отрегулировать.'},
+  {user:'Вызови дочь.',bimo:'Звоню Анне Николаевне... Соединяю вас.'},
+];
+var vIdx=0;
+if(vbarsEl){var vHeights=[6,14,9,20,11,18,7,15,22,10,17,8];vHeights.forEach(function(h,i){var b=document.createElement('div');b.className='vbar';b.style.cssText='height:'+h+'px;animation-delay:'+(i*.08)+'s;animation-duration:0s';vbarsEl.appendChild(b);});}
+function toggleVoice(){
+  var btn=document.getElementById('vbtn'),hint=document.getElementById('voice-hint'),dialog=document.getElementById('voice-dialog');
+  if(vRecording){
+    vRecording=false;btn.classList.remove('recording');hint.textContent='Нажмите и говорите';
+    document.querySelectorAll('.vbar').forEach(function(b){b.style.animationDuration='0s';b.style.transform='scaleY(1)';});
+    if(vTimer)clearTimeout(vTimer);
+    var sc=vScripts[vIdx%vScripts.length];vIdx++;
+    var ub=document.createElement('div');ub.className='voice-bubble user';ub.textContent=sc.user;dialog.appendChild(ub);
+    dialog.scrollTop=dialog.scrollHeight;
+    setTimeout(function(){
+      var bb=document.createElement('div');bb.className='voice-bubble';bb.textContent=sc.bimo;dialog.appendChild(bb);
+      dialog.scrollTop=dialog.scrollHeight;
+    },900);
+  } else {
+    vRecording=true;btn.classList.add('recording');hint.textContent='Слушаю...';
+    document.querySelectorAll('.vbar').forEach(function(b,i){b.style.animationDuration=(0.5+Math.random()*.6)+'s';b.style.animationTimingFunction='ease-in-out';});
+    vTimer=setTimeout(function(){if(vRecording)toggleVoice();},3000);
+  }
+}
+
+/* ── TEMP / SELECTORS ── */
+var bt=22;
+function chT(d){bt=Math.min(30,Math.max(16,bt+d));var e=document.getElementById('btemp');if(e)e.textContent=bt+'°';}
+function selH(el){el.closest('.holo-opts').querySelectorAll('.holo-opt').forEach(function(o){o.classList.remove('sel')});el.classList.add('sel');}
+function selO(el){el.closest('.opt-row').querySelectorAll('.opt-pill').forEach(function(o){o.classList.remove('sel')});el.classList.add('sel');}
+</script>
+</body>
+</html>
